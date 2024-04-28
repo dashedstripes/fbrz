@@ -10,6 +10,13 @@ class FiberNode {
     this.layer = layer;
   }
 
+  insertText(offset: number, text: string) {
+    const before = this.value.slice(0, offset);
+    const after = this.value.slice(offset);
+
+    this.value = before + text + after;
+  }
+
   addChild(child: FiberNode) {
     child.layer = this.layer + 1;
     this.children.push(child);
@@ -77,6 +84,10 @@ class FiberTree {
   render() {
     this.rootDiv.appendChild(this.root.render());
   }
+
+  clearRender() {
+    this.rootDiv.innerHTML = "";
+  }
 }
 
 interface Cursor {
@@ -103,12 +114,23 @@ class Editor {
 
     this.tree.rootDiv.onbeforeinput = (e) => {
       e.preventDefault();
-      console.log("TODO: handle input");
+
+      switch (e.inputType) {
+        case "insertText": {
+          const text = e.data || "";
+          this.cursor.focus.insertText(this.cursor.focusOffset, text);
+          this.cursor.focusOffset += 1;
+
+          this.tree.clearRender();
+          this.tree.render();
+        }
+      }
     };
 
     document.onselectionchange = () => {
       const selection = document.getSelection();
       const anchorNode = selection?.anchorNode;
+      const focusNode = selection?.focusNode;
 
       const closestParentAnchor = this.findNearestParentDiv(anchorNode as Node);
 
@@ -119,9 +141,7 @@ class Editor {
         this.tree.root,
       );
 
-      const closestParentFocus = this.findNearestParentDiv(
-        selection?.focusNode as Node,
-      );
+      const closestParentFocus = this.findNearestParentDiv(focusNode as Node);
 
       if (!closestParentFocus) return;
 
@@ -164,6 +184,6 @@ editor.tree.root.addChild(new FiberNode("c2", "child2"));
 editor.tree.root.firstChild().addChild(new FiberNode("c1.1", "child1.1"));
 editor.tree.root.firstChild().addChild(new FiberNode("c1.2", "child1.2"));
 
-editor.tree.root.lastChild().addChild(new FiberNode("c1.2", "child2.1"));
+editor.tree.root.lastChild().addChild(new FiberNode("c2.1", "child2.1"));
 
 editor.render();
