@@ -34,6 +34,16 @@ class FiberNode {
     return this.children[this.children.length - 1];
   }
 
+  updateRenderedValue() {
+    const container = document.getElementById(this.id) as HTMLElement;
+    let pElement = container.querySelector("p");
+    if (!pElement) {
+      pElement = document.createElement("p");
+      container.appendChild(pElement);
+    }
+    pElement.textContent = this.value;
+  }
+
   render() {
     const element = document.createElement("div");
     element.id = this.id;
@@ -64,6 +74,8 @@ class FiberTree {
   constructor(rootId: string) {
     const rootDiv = document.getElementById(rootId) as HTMLElement;
     rootDiv.contentEditable = "true";
+    rootDiv.style.whiteSpace = "pre-wrap";
+
     this.rootDiv = rootDiv;
   }
 
@@ -120,9 +132,8 @@ class Editor {
           const text = e.data || "";
           this.cursor.focus.insertText(this.cursor.focusOffset, text);
           this.cursor.focusOffset += 1;
-
-          this.tree.clearRender();
-          this.tree.render();
+          this.cursor.focus.updateRenderedValue();
+          this.restoreCursor();
         }
       }
     };
@@ -169,6 +180,29 @@ class Editor {
     }
 
     return n.parentNode as HTMLElement;
+  }
+
+  restoreCursor() {
+    const selection = document.getSelection();
+    const range = document.createRange();
+
+    const anchorNode = document.getElementById(this.cursor.anchor.id);
+    const focusNode = document.getElementById(this.cursor.focus.id);
+
+    if (!anchorNode || !focusNode) return;
+
+    range.setStart(
+      anchorNode.firstChild?.firstChild as Node,
+      this.cursor.anchorOffset,
+    );
+    range.setEnd(
+      focusNode.firstChild?.firstChild as Node,
+      this.cursor.focusOffset,
+    );
+
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    selection?.collapseToEnd();
   }
 
   render() {
