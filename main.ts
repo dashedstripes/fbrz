@@ -1,5 +1,6 @@
 class FiberNode {
   id: string;
+  index: number = 0;
   layer: number;
   value: string;
   parent: FiberNode | null = null;
@@ -25,9 +26,12 @@ class FiberNode {
     this.value = before + after;
   }
 
-  addChild(child: FiberNode) {
+  addChild(child: FiberNode, tree: FiberTree) {
     child.layer = this.layer + 1;
     child.parent = this;
+    tree.count += 1;
+    child.index = tree.count;
+
     this.children.push(child);
   }
 
@@ -79,6 +83,7 @@ class FiberNode {
 class FiberTree {
   root: FiberNode;
   rootDiv: HTMLElement;
+  count: number = 0;
 
   constructor(rootId: string) {
     const rootDiv = document.getElementById(rootId) as HTMLElement;
@@ -128,19 +133,26 @@ class FiberTree {
     return commonAncestor;
   }
 
-  findNodesBetween(anchor: string, focus: string) {
-    const commonAncestor = this.findCommonAncestor(anchor, focus);
+  findNodesBetween(anchor: FiberNode, focus: FiberNode) {
+    const commonAncestor = this.findCommonAncestor(anchor.id, focus.id);
     if (!commonAncestor) return;
 
     const nodesInRange: FiberNode[] = [];
     let inRange = false;
+
+    // make sure anchor is before focus if selection is bottom to top
+    if (focus.index < anchor.index) {
+      const temp = anchor;
+      anchor = focus;
+      focus = temp;
+    }
 
     function traverse(n: FiberNode) {
       if (n === null) {
         return;
       }
 
-      if (n.id == anchor) {
+      if (n.id == anchor.id) {
         inRange = true;
       }
 
@@ -148,7 +160,7 @@ class FiberTree {
         nodesInRange.push(n);
       }
 
-      if (n.id == focus) {
+      if (n.id == focus.id) {
         inRange = false;
         return;
       }
@@ -217,9 +229,17 @@ class Editor {
             this.restoreCursor();
           } else {
             // delete range
-            const nodesInRange = this.tree.findNodesBetween(
+            const anchorNode = this.tree.findNodeById(
               this.cursor.anchor.id,
+              this.tree.root,
+            );
+            const focusNode = this.tree.findNodeById(
               this.cursor.focus.id,
+              this.tree.root,
+            );
+            const nodesInRange = this.tree.findNodesBetween(
+              anchorNode,
+              focusNode,
             );
             console.log(nodesInRange);
           }
@@ -302,16 +322,22 @@ class Editor {
 
 const editor = new Editor("app");
 
-editor.tree.root.addChild(new FiberNode("c1", "child1"));
-editor.tree.root.addChild(new FiberNode("c2", "child2"));
+editor.tree.root.addChild(new FiberNode("c1", "child1"), editor.tree);
+editor.tree.root.addChild(new FiberNode("c2", "child2"), editor.tree);
 
-editor.tree.root.firstChild().addChild(new FiberNode("c1.1", "child1.1"));
-editor.tree.root.firstChild().addChild(new FiberNode("c1.2", "child1.2"));
+editor.tree.root
+  .firstChild()
+  .addChild(new FiberNode("c1.1", "child1.1"), editor.tree);
+editor.tree.root
+  .firstChild()
+  .addChild(new FiberNode("c1.2", "child1.2"), editor.tree);
 editor.tree.root
   .firstChild()
   .lastChild()
-  .addChild(new FiberNode("c1.2.1", "child1.2.1"));
+  .addChild(new FiberNode("c1.2.1", "child1.2.1"), editor.tree);
 
-editor.tree.root.lastChild().addChild(new FiberNode("c2.1", "child2.1"));
+editor.tree.root
+  .lastChild()
+  .addChild(new FiberNode("c2.1", "child2.1"), editor.tree);
 
 editor.render();
