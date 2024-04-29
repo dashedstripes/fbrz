@@ -1,6 +1,5 @@
 class FiberNode {
   id: string;
-  index: number = 0;
   layer: number;
   value: string;
   parent: FiberNode | null = null;
@@ -133,18 +132,21 @@ class FiberTree {
     return commonAncestor;
   }
 
-  findNodesBetween(anchor: FiberNode, focus: FiberNode) {
+  findNodesBetween(
+    anchor: FiberNode,
+    focus: FiberNode,
+    direction: "forward" | "backward",
+  ) {
     const commonAncestor = this.findCommonAncestor(anchor.id, focus.id);
     if (!commonAncestor) return;
 
     const nodesInRange: FiberNode[] = [];
     let inRange = false;
 
-    // make sure anchor is before focus if selection is bottom to top
-    if (focus.index < anchor.index) {
-      const temp = anchor;
+    if (direction === "backward") {
+      const tmp = anchor;
       anchor = focus;
-      focus = temp;
+      focus = tmp;
     }
 
     function traverse(n: FiberNode) {
@@ -172,6 +174,7 @@ class FiberTree {
     }
 
     traverse(commonAncestor);
+
     return nodesInRange;
   }
 
@@ -201,6 +204,7 @@ interface Cursor {
   anchorOffset: number;
   focus: FiberNode;
   focusOffset: number;
+  direction: "forward" | "backward";
 }
 
 class Editor {
@@ -216,6 +220,7 @@ class Editor {
       anchorOffset: 0,
       focus: this.tree.root,
       focusOffset: 0,
+      direction: "forward",
     };
 
     this.tree.rootDiv.onbeforeinput = (e) => {
@@ -249,17 +254,16 @@ class Editor {
               this.cursor.focus.id,
               this.tree.root,
             );
+
             const nodesInRange = this.tree.findNodesBetween(
               anchorNode,
               focusNode,
+              this.cursor.direction,
             );
-
-            console.log(nodesInRange);
 
             if (!nodesInRange) return;
 
             this.tree.markDOMNodesForDeletion(nodesInRange);
-            console.log(nodesInRange);
           }
           break;
         }
@@ -270,6 +274,8 @@ class Editor {
       const selection = document.getSelection();
       const anchorNode = selection?.anchorNode;
       const focusNode = selection?.focusNode;
+
+      if (!anchorNode || !focusNode) return;
 
       const closestParentAnchor = this.findNearestParentDiv(anchorNode as Node);
 
@@ -294,6 +300,11 @@ class Editor {
         focusOffset: selection?.focusOffset || 0,
         anchor: anchorFiberNode,
         anchorOffset: selection?.anchorOffset || 0,
+        direction:
+          selection?.anchorNode.compareDocumentPosition(selection?.focusNode) &
+          Node.DOCUMENT_POSITION_FOLLOWING
+            ? "forward"
+            : "backward",
       };
     };
   }
