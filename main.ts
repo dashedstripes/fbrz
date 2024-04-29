@@ -175,6 +175,18 @@ class FiberTree {
     return nodesInRange;
   }
 
+  markDOMNodesForDeletion(nodes: FiberNode[]) {
+    nodes.forEach((node) => {
+      const el = document.getElementById(node.id);
+      if (el) {
+        if (el.firstChild) {
+          let p = el.firstChild as HTMLElement;
+          p.style.textDecoration = "line-through";
+        }
+      }
+    });
+  }
+
   render() {
     this.rootDiv.appendChild(this.root.render());
   }
@@ -241,6 +253,12 @@ class Editor {
               anchorNode,
               focusNode,
             );
+
+            console.log(nodesInRange);
+
+            if (!nodesInRange) return;
+
+            this.tree.markDOMNodesForDeletion(nodesInRange);
             console.log(nodesInRange);
           }
           break;
