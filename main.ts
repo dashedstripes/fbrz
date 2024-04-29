@@ -2,6 +2,7 @@ class FiberNode {
   id: string;
   layer: number;
   value: string;
+  parent: FiberNode | null = null;
   children: FiberNode[] = [];
 
   constructor(id: string, value: string, layer: number = 0) {
@@ -26,6 +27,7 @@ class FiberNode {
 
   addChild(child: FiberNode) {
     child.layer = this.layer + 1;
+    child.parent = this;
     this.children.push(child);
   }
 
@@ -100,6 +102,67 @@ class FiberTree {
     }
   }
 
+  findCommonAncestor(anchor: string, focus: string) {
+    const anchorNode = this.findNodeById(anchor, this.root);
+    const focusNode = this.findNodeById(focus, this.root);
+
+    const anchorAncestors: FiberNode[] = [];
+    let n = anchorNode;
+
+    while (n) {
+      anchorAncestors.push(n);
+      n = n.parent;
+    }
+
+    let commonAncestor = null;
+    n = focusNode;
+
+    while (n) {
+      if (anchorAncestors.includes(n)) {
+        commonAncestor = n;
+        break;
+      }
+      n = n.parent;
+    }
+
+    return commonAncestor;
+  }
+
+  findNodesBetween(anchor: string, focus: string) {
+    const commonAncestor = this.findCommonAncestor(anchor, focus);
+    if (!commonAncestor) return;
+
+    const nodesInRange: FiberNode[] = [];
+    let inRange = false;
+
+    function traverse(n: FiberNode) {
+      if (n === null) {
+        return;
+      }
+
+      if (n.id == anchor) {
+        inRange = true;
+      }
+
+      if (inRange) {
+        nodesInRange.push(n);
+      }
+
+      if (n.id == focus) {
+        inRange = false;
+        return;
+      }
+
+      for (let i = 0; i < n.children.length; i++) {
+        const child = n.children[i];
+        traverse(child);
+      }
+    }
+
+    traverse(commonAncestor);
+    return nodesInRange;
+  }
+
   render() {
     this.rootDiv.appendChild(this.root.render());
   }
@@ -110,10 +173,10 @@ class FiberTree {
 }
 
 interface Cursor {
-  focus: FiberNode;
-  focusOffset: number;
   anchor: FiberNode;
   anchorOffset: number;
+  focus: FiberNode;
+  focusOffset: number;
 }
 
 class Editor {
@@ -125,10 +188,10 @@ class Editor {
     this.tree.root = new FiberNode("root", "root");
 
     this.cursor = {
-      focus: this.tree.root,
-      focusOffset: 0,
       anchor: this.tree.root,
       anchorOffset: 0,
+      focus: this.tree.root,
+      focusOffset: 0,
     };
 
     this.tree.rootDiv.onbeforeinput = (e) => {
@@ -152,6 +215,13 @@ class Editor {
             this.cursor.focusOffset -= 1;
             this.cursor.focus.updateRenderedValue();
             this.restoreCursor();
+          } else {
+            // delete range
+            const nodesInRange = this.tree.findNodesBetween(
+              this.cursor.anchor.id,
+              this.cursor.focus.id,
+            );
+            console.log(nodesInRange);
           }
           break;
         }
@@ -237,6 +307,10 @@ editor.tree.root.addChild(new FiberNode("c2", "child2"));
 
 editor.tree.root.firstChild().addChild(new FiberNode("c1.1", "child1.1"));
 editor.tree.root.firstChild().addChild(new FiberNode("c1.2", "child1.2"));
+editor.tree.root
+  .firstChild()
+  .lastChild()
+  .addChild(new FiberNode("c1.2.1", "child1.2.1"));
 
 editor.tree.root.lastChild().addChild(new FiberNode("c2.1", "child2.1"));
 
