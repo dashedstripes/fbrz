@@ -156,7 +156,7 @@ class FiberTree {
         inRange = true;
       }
 
-      if (inRange) {
+      if (inRange && n.id !== "root") {
         nodesInRange.push(n);
       }
 
