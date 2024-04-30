@@ -18,18 +18,29 @@ class FiberNode {
     this.value = before + text + after;
   }
 
-  deleteText(offset: number) {
-    const before = this.value.slice(0, offset - 1);
-    const after = this.value.slice(offset);
+  deleteText(anchorOffset: number, focusOffset: number) {
+    if (anchorOffset > focusOffset) {
+      const tmp = anchorOffset;
+      anchorOffset = focusOffset;
+      focusOffset = tmp;
+    }
 
-    this.value = before + after;
+    if (anchorOffset === focusOffset) {
+      const before = this.value.slice(0, focusOffset - 1);
+      const after = this.value.slice(focusOffset);
+      this.value = before + after;
+    } else {
+      const start = this.value.slice(0, anchorOffset);
+      const end = this.value.slice(focusOffset);
+
+      this.value = start + end;
+    }
   }
 
   addChild(child: FiberNode, tree: FiberTree) {
     child.layer = this.layer + 1;
     child.parent = this;
     tree.count += 1;
-    child.index = tree.count;
 
     this.children.push(child);
   }
@@ -268,12 +279,17 @@ class Editor {
           break;
         }
         case "deleteContentBackward": {
-          if (this.cursor.focusOffset === 0) {
+          if (this.cursor.focusOffset === 0 && this.cursor.anchorOffset === 0) {
             // merge with previous node
           } else if (this.cursor.focus.id === this.cursor.anchor.id) {
-            this.cursor.focus.deleteText(this.cursor.focusOffset);
+            this.cursor.focus.deleteText(
+              this.cursor.anchorOffset,
+              this.cursor.focusOffset,
+            );
+
             this.cursor.anchorOffset -= 1;
             this.cursor.focusOffset -= 1;
+
             this.cursor.focus.updateRenderedValue();
             this.restoreCursor();
           } else {
