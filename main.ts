@@ -287,8 +287,14 @@ class Editor {
               this.cursor.focusOffset,
             );
 
-            this.cursor.anchorOffset -= 1;
-            this.cursor.focusOffset -= 1;
+            if (this.cursor.anchorOffset === this.cursor.focusOffset) {
+              this.cursor.anchorOffset -= 1;
+              this.cursor.focusOffset -= 1;
+            } else if (this.cursor.anchorOffset < this.cursor.focusOffset) {
+              this.cursor.focusOffset = this.cursor.anchorOffset;
+            } else {
+              this.cursor.anchorOffset = this.cursor.focusOffset;
+            }
 
             this.cursor.focus.updateRenderedValue();
             this.restoreCursor();
