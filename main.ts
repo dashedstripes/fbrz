@@ -68,26 +68,38 @@ class FiberNode {
   }
 
   render() {
-    const element = document.createElement("div");
-    element.id = this.id;
+    if (this.id === "root") {
+      const element = document.createElement("div");
+      element.id = this.id;
 
-    element.innerHTML = `
-      <div class="node">
-        <button>-</button>
-        <p>${this.value}</p>
-      </div>
-    `;
+      this.children.forEach((child: FiberNode) => {
+        const childEl = child.render();
+        element.appendChild(childEl);
+      });
 
-    if (this.layer > 0) {
-      element.style.marginLeft = `${this.layer * 30}px`;
+      return element;
+    } else {
+      const element = document.createElement("div");
+      element.id = this.id;
+
+      element.innerHTML = `
+        <div class="node">
+          <button>-</button>
+          <p>${this.value}</p>
+        </div>
+      `;
+
+      if (this.layer > 0) {
+        element.style.marginLeft = `${this.layer * 30}px`;
+      }
+
+      this.children.forEach((child: FiberNode) => {
+        const childEl = child.render();
+        element.appendChild(childEl);
+      });
+
+      return element;
     }
-
-    this.children.forEach((child: FiberNode) => {
-      const childEl = child.render();
-      element.appendChild(childEl);
-    });
-
-    return element;
   }
 }
 
