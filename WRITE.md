@@ -4,3 +4,4 @@
 - define the API first, then worry about implementation
 - fixing when selection is made from bottom up (flip anchors using index)
 - understand the problem first
+- only rerender branches of tree that have changed
