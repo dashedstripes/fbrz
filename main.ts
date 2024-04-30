@@ -178,15 +178,47 @@ class FiberTree {
     return nodesInRange;
   }
 
-  markDOMNodesForDeletion(nodes: FiberNode[]) {
+  deleteDOMNodes(
+    nodes: FiberNode[],
+    anchor: FiberNode,
+    focus: FiberNode,
+    anchorOffset: number,
+    focusOffset: number,
+    cursorDirection: "forward" | "backward",
+  ) {
+    if (cursorDirection === "backward") {
+      const tmp = anchor;
+      anchor = focus;
+      focus = tmp;
+      const tmpOffset = anchorOffset;
+      anchorOffset = focusOffset;
+      focusOffset = tmpOffset;
+    }
+
+    // merge the text of the anchor and focus nodes
+    if (anchor.id !== focus.id) {
+      anchor.value =
+        anchor.value.slice(0, anchorOffset) + focus.value.slice(focusOffset);
+      anchor.updateRenderedValue();
+      anchor.children = focus.children;
+
+      const anchorParent = anchor.parent;
+      if (!anchorParent) return;
+
+      const parent = document.getElementById(anchorParent.id);
+      if (!parent) return;
+
+      parent.replaceWith(anchorParent.render());
+    }
+
     nodes.forEach((node) => {
+      if (node.id === anchor.id) return;
       const el = document.getElementById(node.id);
-      if (el) {
-        if (el.firstChild) {
-          let p = el.firstChild as HTMLElement;
-          p.style.textDecoration = "line-through";
-        }
-      }
+      if (!el) return;
+      if (!el.firstChild) return;
+      let p = el.firstChild as HTMLElement;
+      p.style.textDecoration = "line-through";
+      el.remove();
     });
   }
 
@@ -263,7 +295,22 @@ class Editor {
 
             if (!nodesInRange) return;
 
-            this.tree.markDOMNodesForDeletion(nodesInRange);
+            this.tree.deleteDOMNodes(
+              nodesInRange,
+              anchorNode,
+              focusNode,
+              this.cursor.anchorOffset,
+              this.cursor.focusOffset,
+              this.cursor.direction,
+            );
+
+            if (this.cursor.direction === "forward") {
+              this.cursor.focus = this.cursor.anchor;
+            } else {
+              this.cursor.anchor = this.cursor.focus;
+            }
+
+            this.restoreCursor();
           }
           break;
         }
