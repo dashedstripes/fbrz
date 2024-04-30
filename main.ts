@@ -71,14 +71,15 @@ class FiberNode {
     const element = document.createElement("div");
     element.id = this.id;
 
-    const pElement = document.createElement("p");
-
-    pElement.textContent = this.value;
-
-    element.appendChild(pElement);
+    element.innerHTML = `
+      <div class="node">
+        <button>-</button>
+        <p>${this.value}</p>
+      </div>
+    `;
 
     if (this.layer > 0) {
-      element.style.marginLeft = `${this.layer * 20}px`;
+      element.style.marginLeft = `${this.layer * 30}px`;
     }
 
     this.children.forEach((child: FiberNode) => {
@@ -98,7 +99,6 @@ class FiberTree {
   constructor(rootId: string) {
     const rootDiv = document.getElementById(rootId) as HTMLElement;
     rootDiv.contentEditable = "true";
-    rootDiv.style.whiteSpace = "pre-wrap";
 
     this.rootDiv = rootDiv;
   }
@@ -226,8 +226,8 @@ class FiberTree {
       if (node.id === anchor.id) return;
       const el = document.getElementById(node.id);
       if (!el) return;
-      if (!el.firstChild) return;
-      let p = el.firstChild as HTMLElement;
+      if (!el.querySelector("p")) return;
+      let p = el.querySelector("p") as HTMLElement;
       p.style.textDecoration = "line-through";
       el.remove();
     });
@@ -383,7 +383,7 @@ class Editor {
 
     let n = node;
 
-    while (n.parentNode && n.parentNode.nodeName !== "DIV") {
+    while (n.parentNode && !n.parentElement?.id) {
       n = n.parentNode;
     }
 
@@ -400,11 +400,11 @@ class Editor {
     if (!anchorNode || !focusNode) return;
 
     range.setStart(
-      anchorNode.firstChild?.firstChild as Node,
+      anchorNode.querySelector("p")?.firstChild as Node,
       this.cursor.anchorOffset,
     );
     range.setEnd(
-      focusNode.firstChild?.firstChild as Node,
+      focusNode.querySelector("p")?.firstChild as Node,
       this.cursor.focusOffset,
     );
 
